@@ -21,8 +21,9 @@ except LookupError:
 sia = SentimentIntensityAnalyzer()
 
 # --- Load FinBERT ---
-finbert_tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-finbert_model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+finbert_tokenizer = AutoTokenizer.from_pretrained("./models/finbert")
+finbert_model = AutoModelForSequenceClassification.from_pretrained("./models/finbert")
+
 
 # --- Load Loughran-McDonald Dictionary ---
 lmd_df = pd.read_csv("D:/jinay/Loughran-McDonald_MasterDictionary_1993-2024.csv")
