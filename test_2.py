@@ -21,8 +21,11 @@ except LookupError:
 sia = SentimentIntensityAnalyzer()
 
 # --- Load FinBERT ---
-finbert_tokenizer = AutoTokenizer.from_pretrained("./models/finbert")
-finbert_model = AutoModelForSequenceClassification.from_pretrained("./models/finbert")
+# Try this once with internet ON
+tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=False)
+model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=False)
+tokenizer.save_pretrained("./models/finbert")
+model.save_pretrained("./models/finbert")
 
 
 # --- Load Loughran-McDonald Dictionary ---
