@@ -33,8 +33,9 @@ negative_words = set(lmd_df[lmd_df['Negative'] > 0]['Word'].str.lower())
 # --- Load FinBERT ---
 @st.cache_resource
 def load_finbert():
-    tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-    model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
+    tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=False)
+    model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=False)
+
     return tokenizer, model
 
 finbert_tokenizer, finbert_model = load_finbert()
