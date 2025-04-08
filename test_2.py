@@ -24,8 +24,7 @@ sia = SentimentIntensityAnalyzer()
 # Try this once with internet ON
 tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=True)
 model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=True)
-tokenizer.save_pretrained("./models/finbert")
-model.save_pretrained("./models/finbert")
+
 
 
 # --- Load Loughran-McDonald Dictionary ---
