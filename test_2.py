@@ -1,13 +1,25 @@
+import os
+
+# --- Streamlit Config ---
+os.makedirs(".streamlit", exist_ok=True)
+with open(".streamlit/config.toml", "w") as f:
+    f.write("""
+[server]
+maxUploadSize = 500
+""")
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 import docx
 import PyPDF2
+import tempfile
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from textblob import TextBlob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from io import BytesIO
 
 # --- Streamlit Setup ---
 st.set_page_config(layout="wide", page_title="📊 Unified Financial Sentiment Dashboard")
@@ -21,24 +33,23 @@ except LookupError:
 sia = SentimentIntensityAnalyzer()
 
 # --- Load FinBERT ---
-# Try this once with internet ON
-tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=True)
-model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=True)
+tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 
-
+# Save to disk
+tokenizer.save_pretrained("./models/finbert")
+model.save_pretrained("./models/finbert")
 
 # --- Load Loughran-McDonald Dictionary ---
 lmd_df = pd.read_csv("D:/jinay/Loughran-McDonald_MasterDictionary_1993-2024.csv")
 positive_words = set(lmd_df[lmd_df['Positive'] > 0]['Word'].str.lower())
 negative_words = set(lmd_df[lmd_df['Negative'] > 0]['Word'].str.lower())
 
-
 # --- Load FinBERT ---
 @st.cache_resource
 def load_finbert():
-    tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=False)
-    model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert", cache_dir="./model", local_files_only=False)
-
+    tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
+    model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
     return tokenizer, model
 
 finbert_tokenizer, finbert_model = load_finbert()
@@ -55,9 +66,14 @@ lm_positive, lm_negative = load_lm_dict()
 
 # --- File/Text Handling ---
 def extract_text(file):
+    text = ""
     if file.type == "application/pdf":
-        reader = PyPDF2.PdfReader(file)
-        return " ".join(page.extract_text() for page in reader.pages if page.extract_text())
+        pdf_reader = PyPDF2.PdfReader(BytesIO(file.getvalue()))
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text
     elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         doc = docx.Document(file)
         return " ".join([para.text for para in doc.paragraphs])
@@ -148,7 +164,7 @@ if keyword and text:
 # --- Display ---
 if text:
     st.subheader("📄 Extracted Text")
-    st.text_area("Preview", text[:2000] + "..." if len(text) > 2000 else text, height=200)
+    st.text_area("Preview", text[:2000] + "..." if len(text) > 2000 else text, height=1000)
 
     st.subheader("📈 Sentiment Analysis Results")
     vader_res = analyze_vader(text)
@@ -253,28 +269,47 @@ if text:
 
     st.subheader("📘 Interpretation Guide")
     st.markdown("""
-    - **VADER**: Compound score ranges from -1 to +1. 
-        - Positive sentiment: > 0.05
-        - Negative sentiment: < -0.05
-        - Neutral sentiment: between -0.05 and 0.05
-        - Implies a general sentiment tilt based on social media-like text features.
+    ### 🧠 Sentiment Analysis Techniques – Interpretation Guide
 
-    - **FinBERT**: Specialized for financial domain.
-        - Returns probabilities for: Positive, Neutral, Negative.
-        - Highest probability determines overall sentiment.
-        - Implies how market or financial language typically signals sentiment.
+    ---
 
-    - **Loughran-McDonald**:
-        - Uses predefined financial-positive and financial-negative word lists.
-        - Positive/Negative ratios give insight into tone of language in a financial context.
-        - Useful for analyzing filings, statements, and disclosures.
+    #### **1. VADER (Valence Aware Dictionary and sEntiment Reasoner)**  
+    - **Scoring Range**: Compound score from -1 (most negative) to +1 (most positive).
+    - **Interpretation**:
+        - **Positive Sentiment**: Score > 0.05  
+        - **Negative Sentiment**: Score < -0.05  
+        - **Neutral Sentiment**: Score between -0.05 and 0.05  
+    - VADER is sensitive to both polarity (positive/negative sentiment) and intensity (strength of emotion).
 
-    - **TextBlob**:
-        - **Polarity**: -1 (most negative) to +1 (most positive)
-        - **Subjectivity**: 0 (very objective) to 1 (very subjective)
-        - High subjectivity implies opinionated text, while low suggests factual.
-        - Helps understand tone and confidence level in narrative.
+    ---
+
+    #### **2. FinBERT – Financial BERT Model**
+    - **Output**: Probabilities for each class – **Positive**, **Neutral**, and **Negative**.
+    - **Interpretation**:
+        - The class with the **highest probability** is selected as the overall sentiment.
+        - Confidence in sentiment is proportional to the predicted probability score.
+
+    ---
+
+    #### **3. Loughran-McDonald Sentiment Dictionary**
+    - **Method**: Matches words against domain-specific lexicons (e.g., Positive, Negative, Uncertainty, Litigious, Constraining).
+    - **Interpretation**:
+        - A higher frequency of positive vs. negative words indicates optimistic tone.
+        - Additional categories like **Uncertainty** and **Litigious** highlight specific risk-related language.
+        - Results are often summarized through positive/negative ratios or category-wise counts.
+
+    ---
+
+    #### **4. TextBlob**
+    - **Polarity**: Measures sentiment on a scale from -1 (negative) to +1 (positive).
+    - **Subjectivity**: Scores range from 0 (completely objective) to 1 (completely subjective).
+    - **Interpretation**:
+        - **Polarity** helps detect tone (favorable or critical language).
+        - **Subjectivity** helps assess how much the text reflects opinions, beliefs, or personal views rather than facts.
+
+    ---
     """)
+
 
 else:
     st.info("📌 Please upload a document or input text to analyze.")
