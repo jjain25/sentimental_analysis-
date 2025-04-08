@@ -20,6 +20,8 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from textblob import TextBlob
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from io import BytesIO
+import zipfile
+import os
 
 # --- Streamlit Setup ---
 st.set_page_config(layout="wide", page_title="📊 Unified Financial Sentiment Dashboard")
@@ -32,12 +34,23 @@ except LookupError:
     nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-model = AutoModelForSequenceClassification.from_pretrained("finbert",local_files_only=True)
-tokenizer = AutoTokenizer.from_pretrained("finbert",local_files_only=True)
+
+# Unzip the model if not already extracted
+if not os.path.exists("finbert"):
+    with zipfile.ZipFile("finbert.zip", 'r') as zip_ref:
+        zip_ref.extractall("finbert")
+
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("finbert", local_files_only=True)
+model = AutoModelForSequenceClassification.from_pretrained("finbert", local_files_only=True)
+
 # --- Load Loughran-McDonald Dictionary ---
 lmd_df = pd.read_csv("D:/jinay/Loughran-McDonald_MasterDictionary_1993-2024.csv")
 positive_words = set(lmd_df[lmd_df['Positive'] > 0]['Word'].str.lower())
 negative_words = set(lmd_df[lmd_df['Negative'] > 0]['Word'].str.lower())
+
+
 
 # --- Load FinBERT ---
 @st.cache_resource
@@ -309,11 +322,4 @@ else:
     st.info("📌 Please upload a document or input text to analyze.")
 
 
-import zipfile
-import os
-
-# Unzip only if the folder doesn't already exist
-if not os.path.exists("finbert"):
-    with zipfile.ZipFile("finbert.zip", "r") as zip_ref:
-        zip_ref.extractall("finbert")
 
