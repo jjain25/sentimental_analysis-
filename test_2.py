@@ -7,6 +7,9 @@ with open(".streamlit/config.toml", "w") as f:
 [server]
 maxUploadSize = 500
 """)
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 
 import streamlit as st
 import pandas as pd
