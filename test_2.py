@@ -38,13 +38,6 @@ except LookupError:
 sia = SentimentIntensityAnalyzer()
 
 
-# Unzip the model if not already extracted
-if not os.path.exists("finbert"):
-    with zipfile.ZipFile("finbert.zip", 'r') as zip_ref:
-        zip_ref.extractall("finbert")
-
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
 tokenizer = AutoTokenizer.from_pretrained("finbert", local_files_only=True)
 model = AutoModelForSequenceClassification.from_pretrained("finbert", local_files_only=True)
 
