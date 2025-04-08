@@ -32,14 +32,8 @@ except LookupError:
     nltk.download('vader_lexicon')
 sia = SentimentIntensityAnalyzer()
 
-# --- Load FinBERT ---
-tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-
-# Save to disk
-tokenizer.save_pretrained("./models/finbert")
-model.save_pretrained("./models/finbert")
-
+model = AutoModelForSequenceClassification.from_pretrained("./finbert")
+tokenizer = AutoTokenizer.from_pretrained("./finbert")
 # --- Load Loughran-McDonald Dictionary ---
 lmd_df = pd.read_csv("D:/jinay/Loughran-McDonald_MasterDictionary_1993-2024.csv")
 positive_words = set(lmd_df[lmd_df['Positive'] > 0]['Word'].str.lower())
